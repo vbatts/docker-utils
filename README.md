@@ -21,6 +21,11 @@ due to the nature of image layers being a tar and json, and that is usually
 included in a larger tar archive, some of the same explicit path notations do
 not work the same.
 
+Here is a short screencast on the workflow for a [detached GPG signature
+workflow](http://vbatts.fedorapeople.org/docker/docker_image_signature-vbatts-07012014.webm)
+and validating an images' checksums.
+
+
 For a basic example, saving an image, and getting the tarsum for its layers:
 
 	$ docker save -o busybox.tar busybox
