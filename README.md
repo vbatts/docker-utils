@@ -21,11 +21,6 @@ due to the nature of image layers being a tar and json, and that is usually
 included in a larger tar archive, some of the same explicit path notations do
 not work the same.
 
-Here is a short screencast on the workflow for a [detached GPG signature
-workflow](http://vbatts.fedorapeople.org/docker/docker_image_signature-vbatts-07012014.webm)
-and validating an images' checksums.
-
-
 For a basic example, saving an image, and getting the tarsum for its layers:
 
 	$ docker save -o busybox.tar busybox
@@ -74,7 +69,7 @@ there were sums calculated on a number of images, but a lesser set is being
 validated presently.
 Example:
 
-	$ $ dockertarsum -c ./busybox.tar.sums ./busybox.tar 
+	$ dockertarsum -c ./busybox.tar.sums ./busybox.tar 
 	120e218dd395ec314e7b6249f39d2853911b3d6def6ea164ae05722649f34b16:  OK
 	42eed7f1bf2ac3f1610c5e616d2ab1ee9c7290234240388d6297bc0f32c34229:  OK
 	511136ea3c5a64f264b78b5433614aec563103b4d4702f3ba7d4d2698e22c158:  OK
@@ -82,6 +77,27 @@ Example:
 	deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef:  NOT FOUND
 	$ echo $?
 	0
+
+### Detached Signatures
+
+Here is a short screencast on the workflow for a detached GPG signature
+workflow and validating an images' checksums.
+
+![screenshot](http://vbatts.fedorapeople.org/docker/dockertarsum.png)
+Video: [detached signature image workflow](http://vbatts.fedorapeople.org/docker/docker_image_signature-vbatts-07012014.webm)
+
+The over of the commands for this process are:
+
+	$ go get github.com/vbatts/docker-utils/cmd/dockertarum                         
+	$ docker save -o busybox.tar busybox                                            
+	$ dockertarsum busybox.tar > busybox.image.sums                                 
+	$ cat busybox.image.sums                                                        
+	$ dockertarsum -c ./busybox.image.sums ./busybox.tar                            
+	$ echo $?                                                                       
+	$ gpg -ba ./busybox.image.sums                                                  
+	$ cat busybox.images.sum.asc                                                    
+	$ gpg --verify busybox.images.sum.asc                                           
+
 
 # Contributing
 
