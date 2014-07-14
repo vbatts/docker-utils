@@ -3,10 +3,11 @@ package sum
 import (
 	"archive/tar"
 	"bytes"
-	"github.com/dotcloud/docker/utils"
 	"io"
 	"io/ioutil"
 	"path"
+
+	"github.com/dotcloud/docker/pkg/tarsum"
 )
 
 // .. this is an all-in-one. I wish this could be an iterator.
@@ -37,7 +38,7 @@ func SumAllDockerSave(saved io.Reader) (map[string]string, error) {
 			id := path.Dir(hdr.Name)
 			jsonRdr := bytes.NewReader(jsons[id])
 			delete(jsons, id)
-			sum, err := SumTarLayer(tarRdr, jsonRdr)
+			sum, err := SumTarLayer(tarRdr, jsonRdr, nil)
 			if err != nil {
 				if err == io.EOF {
 					continue
@@ -50,9 +51,14 @@ func SumAllDockerSave(saved io.Reader) (map[string]string, error) {
 	return hashes, nil
 }
 
-func SumTarLayer(tarReader io.Reader, json io.Reader) (string, error) {
-	ts := &utils.TarSum{Reader: tarReader}
-	_, err := io.Copy(ioutil.Discard, ts)
+// if out is not nil, then the tar input is written there instead
+func SumTarLayer(tarReader io.Reader, json io.Reader, out io.Writer) (string, error) {
+	var writer io.Writer = ioutil.Discard
+	if out != nil {
+		writer = out
+	}
+	ts := &tarsum.TarSum{Reader: tarReader}
+	_, err := io.Copy(writer, ts)
 	if err != nil {
 		return "", err
 	}
