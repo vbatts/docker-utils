@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/vbatts/docker-utils/opts"
-	"github.com/vbatts/docker-utils/sum"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/vbatts/docker-utils/opts"
+	"github.com/vbatts/docker-utils/sum"
 )
 
 func main() {
@@ -17,6 +18,11 @@ func main() {
 		failedChecks = []bool{}
 	)
 	flag.Parse()
+
+	if flVersion {
+		fmt.Printf("%s - %s\n", os.Args[0], version.VERSION)
+		os.Exit(0)
+	}
 
 	if len(flChecks.Args) > 0 {
 		checks = Checks{}
@@ -168,13 +174,15 @@ func (c Checks) Get(id string) *Check {
 }
 
 var (
-	flChecks = opts.List{}
-	flStream = false
+	flChecks  = opts.List{}
+	flStream  = false
+	flVersion = false
 )
 
 func init() {
 	flag.Var(&flChecks, "c", "read TarSums from the FILEs (or stdin) and check them")
 	flag.BoolVar(&flStream, "s", true, "read FILEs (or stdin) as the output of `docker save` (this is default)")
+	flag.BoolVar(&flVersion, "v", false, "show version")
 }
 
 const DefaultSpacer = "  "

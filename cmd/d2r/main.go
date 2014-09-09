@@ -3,14 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/vbatts/docker-utils/registry"
-	//"github.com/vbatts/docker-utils/version"
 	"os"
+
+	"github.com/vbatts/docker-utils/registry"
+	"github.com/vbatts/docker-utils/version"
 )
 
 var (
-	flOutdir = flag.String("o", "./static/", "directory to land the output registry files")
-	//flVersion = flag.Bool("v", false, "show version")
+	flOutdir  = flag.String("o", "./static/", "directory to land the output registry files")
+	flVersion = flag.Bool("v", false, "show version")
 )
 
 func main() {
@@ -20,10 +21,10 @@ func main() {
 	}
 	flag.Parse()
 
-	//if *flVersion {
-	//fmt.Printf("%s - %s\n", os.Args[0], version.VERSION)
-	//os.Exit(0)
-	//}
+	if *flVersion {
+		fmt.Printf("%s - %s\n", os.Args[0], version.VERSION)
+		os.Exit(0)
+	}
 
 	reg := registry.Registry{Path: *flOutdir}
 	err := reg.Init()
