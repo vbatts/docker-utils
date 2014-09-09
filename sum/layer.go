@@ -63,9 +63,11 @@ func SumTarLayer(tarReader io.Reader, json io.Reader, out io.Writer) (string, er
 		return "", err
 	}
 
-	buf, err := ioutil.ReadAll(json)
-	if err != nil {
-		return "", err
+	var buf []byte
+	if json != nil {
+		if buf, err = ioutil.ReadAll(json); err != nil {
+			return "", err
+		}
 	}
 
 	return ts.Sum(buf), nil

@@ -78,6 +78,18 @@ Example:
 	$ echo $?
 	0
 
+### Root Filesystem tars
+
+There may be times where it is needed to calculate the fixed time of a tar
+archive, that is not a tar of layers and would not include the json metadata
+payload.
+
+For this there is the `-r` flag.
+
+	$ docker save busybox | tar xO 120e218dd395ec314e7b6249f39d2853911b3d6def6ea164ae05722649f34b16/layer.tar | dockertarsum -r
+	tarsum+sha256:cea0d2071b01b0a79aa4a05ea56ab6fdf3fafa03369d9f4eea8d46ea33c43e5f  -:-
+
+
 ### Detached Signatures
 
 Here is a short screencast on the workflow for a detached GPG signature
