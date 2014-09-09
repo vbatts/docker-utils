@@ -98,6 +98,36 @@ The over of the commands for this process are:
 	$ cat busybox.images.sum.asc                                                    
 	$ gpg --verify busybox.images.sum.asc                                           
 
+## d2r
+
+Tooling for a static v1 Docker registry. This is useful for serving a read-only
+registry.
+
+### Installing
+
+	go get github.com/vbatts/docker-utils/cmd/d2r
+
+### Usage
+
+	$ docker save busybox | d2r -o ./static -
+  $ find ./static -type f
+  ./static/v1/repositories/busybox/images
+  ./static/v1/repositories/busybox/tags
+  ./static/v1/_ping
+  ./static/v1/images/120e218dd395ec314e7b6249f39d2853911b3d6def6ea164ae05722649f34b16/layer
+  ./static/v1/images/120e218dd395ec314e7b6249f39d2853911b3d6def6ea164ae05722649f34b16/tarsum
+  ./static/v1/images/120e218dd395ec314e7b6249f39d2853911b3d6def6ea164ae05722649f34b16/json
+  ./static/v1/images/a9eb172552348a9a49180694790b33a1097f546456d041b6e82e4d7716ddb721/layer
+  ./static/v1/images/a9eb172552348a9a49180694790b33a1097f546456d041b6e82e4d7716ddb721/tarsum
+  ./static/v1/images/a9eb172552348a9a49180694790b33a1097f546456d041b6e82e4d7716ddb721/json
+  ./static/v1/images/a9eb172552348a9a49180694790b33a1097f546456d041b6e82e4d7716ddb721/ancestry
+  ./static/v1/images/42eed7f1bf2ac3f1610c5e616d2ab1ee9c7290234240388d6297bc0f32c34229/layer
+  ./static/v1/images/42eed7f1bf2ac3f1610c5e616d2ab1ee9c7290234240388d6297bc0f32c34229/tarsum
+  ./static/v1/images/42eed7f1bf2ac3f1610c5e616d2ab1ee9c7290234240388d6297bc0f32c34229/json
+  ./static/v1/images/511136ea3c5a64f264b78b5433614aec563103b4d4702f3ba7d4d2698e22c158/layer
+  ./static/v1/images/511136ea3c5a64f264b78b5433614aec563103b4d4702f3ba7d4d2698e22c158/tarsum
+  ./static/v1/images/511136ea3c5a64f264b78b5433614aec563103b4d4702f3ba7d4d2698e22c158/json
+
 
 # Contributing
 
