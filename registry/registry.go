@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/dotcloud/docker/registry"
-	"github.com/vbatts/docker-utils/cmd/d2r/version"
+	"github.com/vbatts/docker-utils/version"
 )
 
 type Registry struct {

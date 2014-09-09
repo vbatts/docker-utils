@@ -26,16 +26,21 @@ func main() {
 		os.Exit(0)
 	}
 
+	if flag.NArg() == 0 {
+		fmt.Println("ERROR: argument expected")
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	reg := registry.Registry{Path: *flOutdir}
-	err := reg.Init()
-	if err != nil {
+	if err := reg.Init(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	for _, arg := range flag.Args() {
 		if arg == "-" {
-			if err = registry.ExtractTar(&reg, os.Stdin); err != nil {
+			if err := registry.ExtractTar(&reg, os.Stdin); err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
