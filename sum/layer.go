@@ -57,8 +57,11 @@ func SumTarLayer(tarReader io.Reader, json io.Reader, out io.Writer) (string, er
 	if out != nil {
 		writer = out
 	}
-	ts := &tarsum.TarSum{Reader: tarReader}
-	_, err := io.Copy(writer, ts)
+	ts, err := tarsum.NewTarSum(tarReader, true, tarsum.Version0)
+	if err != nil {
+		return "", err
+	}
+	_, err = io.Copy(writer, ts)
 	if err != nil {
 		return "", err
 	}
