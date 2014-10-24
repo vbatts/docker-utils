@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dotcloud/docker/registry"
+	"github.com/docker/docker/registry"
 	"github.com/vbatts/docker-utils/version"
 )
 

@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/dotcloud/docker/pkg/tarsum"
+	"github.com/docker/docker/pkg/tarsum"
 )
 
 // .. this is an all-in-one. I wish this could be an iterator.
@@ -57,8 +57,11 @@ func SumTarLayer(tarReader io.Reader, json io.Reader, out io.Writer) (string, er
 	if out != nil {
 		writer = out
 	}
-	ts := &tarsum.TarSum{Reader: tarReader}
-	_, err := io.Copy(writer, ts)
+	ts, err := tarsum.NewTarSum(tarReader, false, tarsum.Version0)
+	if err != nil {
+		return "", err
+	}
+	_, err = io.Copy(writer, ts)
 	if err != nil {
 		return "", err
 	}

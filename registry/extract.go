@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dotcloud/docker/graph"
+	"github.com/docker/docker/graph"
 	"github.com/vbatts/docker-utils/sum"
 )
 
