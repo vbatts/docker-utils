@@ -1,14 +1,17 @@
-= dockertarsum image
+dockertarsum image
+----
 
 An image for use in checking image checksums
 
 
-== Usage
+Usage
+===
 
 	docker save <IMAGE> | docker run -i vbatts/dockertarsum
 
 
-== Building
+Building
+===
 
 By default this image builds named for your user (`$USER`), and to sign the
 binary with my own gpg key (`733F1362`).
