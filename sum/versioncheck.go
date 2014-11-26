@@ -1,8 +1,6 @@
 package sum
 
-import (
-	"github.com/docker/docker/pkg/tarsum"
-)
+import "github.com/docker/docker/pkg/tarsum"
 
 var (
 	// mapping for flag parsing
