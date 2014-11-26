@@ -14,6 +14,8 @@ var (
 	}
 )
 
+// DetermineVersion parses a human provided string (like a flag argument) and
+// determines the tarsum.Version to return
 func DetermineVersion(vstr string) (tarsum.Version, error) {
 	for key, val := range tarsumVersions {
 		if key == vstr {
