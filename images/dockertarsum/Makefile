@@ -8,7 +8,6 @@ BUILDER_NAME		:= $(USER)/$(APP_NAME):build
 # Pass DEFAULT_KEY to override this
 DEFAULT_KEY		:= 733F1362
 
-
 default: runtime
 
 $(APP_NAME): $(BUILDER_DOCKERFILE)

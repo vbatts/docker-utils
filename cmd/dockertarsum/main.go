@@ -21,6 +21,11 @@ func main() {
 		fmt.Printf("%s - %s\n", os.Args[0], version.VERSION)
 		os.Exit(0)
 	}
+	tsVersion, err := sum.DetermineVersion(*flTarsumVersion)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	if len(flChecks.Args) > 0 {
 		for _, c := range flChecks.Args {
@@ -44,12 +49,12 @@ func main() {
 			var err error
 			if !*flRootTar {
 				// assumption is this is stdin from `docker save`
-				if hashes, err = sum.SumAllDockerSave(os.Stdin); err != nil {
+				if hashes, err = sum.SumAllDockerSaveVersioned(os.Stdin, tsVersion); err != nil {
 					fmt.Printf("ERROR: %s\n", err)
 					os.Exit(1)
 				}
 			} else {
-				hash, err := sum.SumTarLayer(os.Stdin, nil, nil)
+				hash, err := sum.SumTarLayerVersioned(os.Stdin, nil, nil, tsVersion)
 				if err != nil {
 					fmt.Printf("ERROR: %s\n", err)
 					os.Exit(1)
@@ -95,12 +100,12 @@ func main() {
 			var hashes map[string]string
 			if !*flRootTar {
 				// assumption is this is a tar from `docker save`
-				if hashes, err = sum.SumAllDockerSave(fh); err != nil {
+				if hashes, err = sum.SumAllDockerSaveVersioned(fh, tsVersion); err != nil {
 					fmt.Printf("ERROR: %s\n", err)
 					os.Exit(1)
 				}
 			} else {
-				hash, err := sum.SumTarLayer(fh, nil, nil)
+				hash, err := sum.SumTarLayerVersioned(fh, nil, nil, tsVersion)
 				if err != nil {
 					fmt.Printf("ERROR: %s\n", err)
 					os.Exit(1)
@@ -150,10 +155,11 @@ func main() {
 }
 
 var (
-	flChecks  = opts.List{}
-	flStream  = flag.Bool("s", true, "read FILEs (or stdin) as the output of `docker save` (this is default)")
-	flVersion = flag.Bool("v", false, "show version")
-	flRootTar = flag.Bool("r", false, "treat the tar(s) root filesystem archives (not a tar of layers)")
+	flChecks        = opts.List{}
+	flTarsumVersion = flag.String("t", "Version0", "Which version of the tarsum checksum to use")
+	flStream        = flag.Bool("s", true, "read FILEs (or stdin) as the output of `docker save` (this is default)")
+	flVersion       = flag.Bool("v", false, "show version")
+	flRootTar       = flag.Bool("r", false, "treat the tar(s) root filesystem archives (not a tar of layers)")
 )
 
 func init() {

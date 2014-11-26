@@ -10,8 +10,13 @@ import (
 	"github.com/docker/docker/pkg/tarsum"
 )
 
-// .. this is an all-in-one. I wish this could be an iterator.
+// for existing usage
 func SumAllDockerSave(saved io.Reader) (map[string]string, error) {
+	return SumAllDockerSaveVersioned(saved, tarsum.Version0)
+}
+
+// .. this is an all-in-one. I wish this could be an iterator.
+func SumAllDockerSaveVersioned(saved io.Reader, v tarsum.Version) (map[string]string, error) {
 	tarRdr := tar.NewReader(saved)
 	hashes := map[string]string{}
 	jsons := map[string][]byte{}
@@ -38,7 +43,7 @@ func SumAllDockerSave(saved io.Reader) (map[string]string, error) {
 			id := path.Dir(hdr.Name)
 			jsonRdr := bytes.NewReader(jsons[id])
 			delete(jsons, id)
-			sum, err := SumTarLayer(tarRdr, jsonRdr, nil)
+			sum, err := SumTarLayerVersioned(tarRdr, jsonRdr, nil, v)
 			if err != nil {
 				if err == io.EOF {
 					continue
@@ -51,13 +56,18 @@ func SumAllDockerSave(saved io.Reader) (map[string]string, error) {
 	return hashes, nil
 }
 
-// if out is not nil, then the tar input is written there instead
+// for existing usage
 func SumTarLayer(tarReader io.Reader, json io.Reader, out io.Writer) (string, error) {
+	return SumTarLayerVersioned(tarReader, json, out, tarsum.Version0)
+}
+
+// if out is not nil, then the tar input is written there instead
+func SumTarLayerVersioned(tarReader io.Reader, json io.Reader, out io.Writer, v tarsum.Version) (string, error) {
 	var writer io.Writer = ioutil.Discard
 	if out != nil {
 		writer = out
 	}
-	ts, err := tarsum.NewTarSum(tarReader, false, tarsum.Version0)
+	ts, err := tarsum.NewTarSum(tarReader, false, v)
 	if err != nil {
 		return "", err
 	}
