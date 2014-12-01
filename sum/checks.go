@@ -53,3 +53,17 @@ func (c Checks) Get(id string) *Check {
 	}
 	return nil
 }
+
+func (c Checks) Versions() []tarsum.Version {
+	versionsMap := map[tarsum.Version]int{}
+	for _, check := range c {
+		if _, ok := versionsMap[check.Version]; !ok {
+			versionsMap[check.Version] = 0
+		}
+	}
+	versions := []tarsum.Version{}
+	for k := range versionsMap {
+		versions = append(versions, k)
+	}
+	return versions
+}
