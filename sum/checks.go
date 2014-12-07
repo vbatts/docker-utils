@@ -3,6 +3,7 @@ package sum
 import (
 	"bufio"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/docker/docker/pkg/tarsum"
@@ -33,6 +34,26 @@ func ReadChecks(input io.Reader) (Checks, error) {
 		checks = append(checks, Check{Hash: sum, Source: source[:i], Id: strings.TrimSpace(source[i+1:]), Version: v})
 	}
 	return checks, nil
+}
+
+func LoadCheckFiles(paths []string) (Checks, error) {
+	checks := Checks{}
+	for _, path := range paths {
+		newChecks, err := LoadCheckFile(path)
+		if err != nil {
+			return checks, err
+		}
+		checks = append(checks, newChecks...)
+	}
+	return checks, nil
+}
+
+func LoadCheckFile(path string) (Checks, error) {
+	fh, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return ReadChecks(fh)
 }
 
 type Check struct {

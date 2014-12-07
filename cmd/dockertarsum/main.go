@@ -12,35 +12,35 @@ import (
 
 func main() {
 	var (
-		checks       = sum.Checks{}
 		failedChecks = []bool{}
 	)
 	flag.Parse()
 
 	if *flVersion {
-		fmt.Printf("%s - %s\n", os.Args[0], version.VERSION)
+		fmt.Fprintf(os.Stderr, "%s - %s\n", os.Args[0], version.VERSION)
 		os.Exit(0)
 	}
 	tsVersion, err := sum.DetermineVersion(*flTarsumVersion)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	checks, err := sum.LoadCheckFiles(flChecks.Args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	if len(flChecks.Args) > 0 {
-		for _, c := range flChecks.Args {
-			fh, err := os.Open(c)
-			if err != nil {
-				fmt.Printf("ERROR: %s\n", err)
-				os.Exit(1)
-			}
-			newChecks, err := sum.ReadChecks(fh)
-			if err != nil {
-				fmt.Printf("ERROR: %s\n", err)
-				os.Exit(1)
-			}
-			checks = append(checks, newChecks...)
+	isIncluded := false
+	for _, v := range checks.Versions() {
+		if v == tsVersion {
+			isIncluded = true
+			break
 		}
+	}
+	if len(checks) != 0 && !isIncluded {
+		fmt.Fprintf(os.Stderr, "ERROR: the TarSum version %q is not included in the check file\n", tsVersion)
+		os.Exit(1)
 	}
 
 	if flag.NArg() == 0 {
@@ -50,13 +50,13 @@ func main() {
 			if !*flRootTar {
 				// assumption is this is stdin from `docker save`
 				if hashes, err = sum.SumAllDockerSaveVersioned(os.Stdin, tsVersion); err != nil {
-					fmt.Printf("ERROR: %s\n", err)
+					fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 					os.Exit(1)
 				}
 			} else {
 				hash, err := sum.SumTarLayerVersioned(os.Stdin, nil, nil, tsVersion)
 				if err != nil {
-					fmt.Printf("ERROR: %s\n", err)
+					fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 					os.Exit(1)
 				}
 				hashes = map[string]string{"-": hash}
@@ -85,7 +85,7 @@ func main() {
 			}
 		} else {
 			// maybe the actual layer.tar ? and json? or image name and we'll call a docker daemon?
-			fmt.Println("ERROR: not implemented yet")
+			fmt.Fprintln(os.Stderr, "ERROR: not implemented yet")
 			os.Exit(2)
 		}
 	}
@@ -93,7 +93,7 @@ func main() {
 	for _, arg := range flag.Args() {
 		fh, err := os.Open(arg)
 		if err != nil {
-			fmt.Printf("ERROR: %s\n", err)
+			fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 			os.Exit(1)
 		}
 		if *flStream {
@@ -135,7 +135,7 @@ func main() {
 			}
 		} else {
 			// maybe the actual layer.tar ? and json? or image name and we'll call a docker daemon?
-			fmt.Println("ERROR: not implemented yet")
+			fmt.Fprintln(os.Stderr, "ERROR: not implemented yet")
 			os.Exit(2)
 		}
 	}
