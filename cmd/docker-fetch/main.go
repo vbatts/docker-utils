@@ -25,6 +25,9 @@ var (
 )
 
 func init() {
+	// XXX print a warning that this tool is not stable yet
+	fmt.Fprintln("WARNING: this tool is not stable yet, and should only be used for testing!")
+
 	flag.BoolVar(&timeout, []string{"t", "-timeout"}, timeout, "allow timeout on the registry session")
 	flag.BoolVar(&debug, []string{"D", "-debug"}, debug, "debugging output")
 	flag.StringVar(&outputStream, []string{"o", "-output"}, outputStream, "output to file (default stdout)")
