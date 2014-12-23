@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/graph"
 	"github.com/docker/docker/opts"
 	"github.com/docker/docker/pkg/archive"
@@ -25,6 +26,14 @@ var (
 )
 
 func init() {
+	log.SetFormatter(&log.JSONFormatter{})
+
+	// Output to stderr instead of stdout, could also be a file.
+	log.SetOutput(os.Stderr)
+
+	// Only log the warning severity or above.
+	log.SetLevel(log.WarnLevel)
+
 	// XXX print a warning that this tool is not stable yet
 	fmt.Fprintln(os.Stderr, "WARNING: this tool is not stable yet, and should only be used for testing!")
 
@@ -36,6 +45,10 @@ func init() {
 
 func main() {
 	flag.Parse()
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
 	var (
 		sessions     map[string]*registry.Session
 		repositories = map[string]graph.Repository{}
@@ -94,19 +107,13 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		if debug {
-			fmt.Fprintf(os.Stderr, "%#v\n", rd)
-		}
-		/*
-			for _, img := range rd.ImgList {
-				fmt.Fprintf(os.Stderr, "%#v\n", img)
-			}
-		*/
+		log.Debugf("rd: %#v", rd)
 
 		// produce the "repositories" file for the archive
 		if _, ok := repositories[imageName]; !ok {
 			repositories[imageName] = graph.Repository{}
 		}
+		log.Debugf("repositories: %#v", repositories)
 
 		tags, err := session.GetRemoteTags([]string{endpoint.String()}, imageName, rd.Tokens)
 		if err != nil {
@@ -116,12 +123,14 @@ func main() {
 		if hash, ok := tags[tagName]; ok {
 			repositories[imageName][tagName] = hash
 		}
+		log.Debugf("repositories: %#v", repositories)
 
 		imgList, err := session.GetRemoteHistory(repositories[imageName][tagName], endpoint.String(), rd.Tokens)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+		log.Debugf("imgList: %#v", imgList)
 
 		for _, imgID := range imgList {
 			// pull layers and jsons
@@ -144,9 +153,7 @@ func main() {
 				os.Exit(1)
 			}
 			fh.Close()
-			if debug {
-				fmt.Fprintln(os.Stderr, fh.Name())
-			}
+			log.Debugf("%s", fh.Name())
 
 			tarRdr, err := session.GetRemoteImageLayer(imgID, endpoint.String(), rd.Tokens, 0)
 			if err != nil {
@@ -180,16 +187,12 @@ func main() {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
-			if debug {
-				fmt.Fprintln(os.Stderr, fh.Name())
-			}
+			log.Debugf("%s", fh.Name())
 		}
 	}
 
 	// marshal the "repositories" file for writing out
-	if debug {
-		fmt.Fprintf(os.Stderr, "%q", repositories)
-	}
+	log.Debugf("repositories: %q", repositories)
 	buf, err := json.Marshal(repositories)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -205,9 +208,7 @@ func main() {
 		os.Exit(1)
 	}
 	fh.Close()
-	if debug {
-		fmt.Fprintln(os.Stderr, fh.Name())
-	}
+	log.Debugf("%s", fh.Name())
 
 	var output io.WriteCloser
 	if outputStream == "-" {
