@@ -43,6 +43,7 @@ func init() {
 	opts.ListVar(&insecureRegistries, []string{"-insecure-registry"}, "Enable insecure communication with specified registries (no certificate verification for HTTPS and enable HTTP fallback) (e.g., localhost:5000 or 10.20.0.0/16) (default to 0.0.0.0/16)")
 }
 
+// TODO rewrite this whole PoC
 func main() {
 	flag.Parse()
 	if debug {
