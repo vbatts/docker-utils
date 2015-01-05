@@ -83,19 +83,19 @@ func main() {
 			tagName = "latest"
 		}
 
-		endpoint, err := registry.NewEndpoint(hostName, insecureRegistries)
+		indexEndpoint, err := registry.NewEndpoint(hostName, insecureRegistries)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "Pulling %s:%s from %s\n", imageName, tagName, endpoint)
+		fmt.Fprintf(os.Stderr, "Pulling %s:%s from %s\n", imageName, tagName, indexEndpoint)
 
 		var session *registry.Session
-		if s, ok := sessions[endpoint.String()]; ok {
+		if s, ok := sessions[indexEndpoint.String()]; ok {
 			session = s
 		} else {
 			// TODO(vbatts) obviously the auth and http factory shouldn't be nil here
-			session, err = registry.NewSession(nil, nil, endpoint, timeout)
+			session, err = registry.NewSession(nil, nil, indexEndpoint, timeout)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
@@ -115,7 +115,11 @@ func main() {
 		}
 		log.Debugf("repositories: %#v", repositories)
 
-		tags, err := session.GetRemoteTags([]string{endpoint.String()}, imageName, rd.Tokens)
+		if len(rd.Endpoints) == 0 {
+			log.Fatalf("expected registry endpoints, but received none from the index")
+		}
+
+		tags, err := session.GetRemoteTags(rd.Endpoints, imageName, rd.Tokens)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -125,7 +129,7 @@ func main() {
 		}
 		log.Debugf("repositories: %#v", repositories)
 
-		imgList, err := session.GetRemoteHistory(repositories[imageName][tagName], endpoint.String(), rd.Tokens)
+		imgList, err := session.GetRemoteHistory(repositories[imageName][tagName], rd.Endpoints[0], rd.Tokens)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -134,7 +138,7 @@ func main() {
 
 		for _, imgID := range imgList {
 			// pull layers and jsons
-			buf, _, err := session.GetRemoteImageJSON(imgID, endpoint.String(), rd.Tokens)
+			buf, _, err := session.GetRemoteImageJSON(imgID, rd.Endpoints[0], rd.Tokens)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
@@ -155,7 +159,7 @@ func main() {
 			fh.Close()
 			log.Debugf("%s", fh.Name())
 
-			tarRdr, err := session.GetRemoteImageLayer(imgID, endpoint.String(), rd.Tokens, 0)
+			tarRdr, err := session.GetRemoteImageLayer(imgID, rd.Endpoints[0], rd.Tokens, 0)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
