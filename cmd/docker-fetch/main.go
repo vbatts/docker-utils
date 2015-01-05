@@ -172,16 +172,22 @@ func main() {
 			// the body is usually compressed
 			gzRdr, err := gzip.NewReader(tarRdr)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			if _, err = io.Copy(fh, gzRdr); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			if err = gzRdr.Close(); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
+				log.Debugf("image layer for %q is not gzipped", imgID)
+				// the archive may not be gzipped, so just copy the stream
+				if _, err = io.Copy(fh, tarRdr); err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(1)
+				}
+			} else {
+				// no error, so gzip decompress the stream
+				if _, err = io.Copy(fh, gzRdr); err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(1)
+				}
+				if err = gzRdr.Close(); err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(1)
+				}
 			}
 			if err = tarRdr.Close(); err != nil {
 				fmt.Fprintln(os.Stderr, err)
