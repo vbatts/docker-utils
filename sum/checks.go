@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"io"
 	"os"
-  "os/exec"
-  "strings"
+	"os/exec"
+	"strings"
 
 	"github.com/docker/docker/pkg/tarsum"
 )
@@ -50,37 +50,37 @@ func LoadCheckFiles(paths []string) (Checks, error) {
 }
 
 func LoadCheckFile(path string) (Checks, error) {
-  file_dir, err := exec.Command("/usr/share/dockerkeys/verify.sh",path).Output()
-  if err != nil {
-    return nil, err
-  }
+	file_dir, err := exec.Command("/usr/share/dockerkeys/verify.sh", path).Output()
+	if err != nil {
+		return nil, err
+	}
 
-  fields := strings.Split(strings.Replace(string(file_dir[:]),"\r","",-1),"\n")
-  sig := fields[0]
-  filename := fields[1]
-  dir := fields[2]
+	fields := strings.Split(strings.Replace(string(file_dir[:]), "\r", "", -1), "\n")
+	sig := fields[0]
+	filename := fields[1]
+	dir := fields[2]
 
-  if len(sig) == 0 {
-    filename = path
-  }
+	if len(sig) == 0 {
+		filename = path
+	}
 
-  defer os.RemoveAll(dir)
+	defer os.RemoveAll(dir)
 
 	fh, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	return ReadChecks(fh,sig)
+	return ReadChecks(fh, sig)
 }
 
 type Check struct {
-	Id      string
-	Source  string
-	Hash    string
-  Signature string
-	Seen    bool
-	Version tarsum.Version
+	Id        string
+	Source    string
+	Hash      string
+	Signature string
+	Seen      bool
+	Version   tarsum.Version
 }
 
 type Checks []Check
