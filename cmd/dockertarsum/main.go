@@ -130,7 +130,11 @@ func main() {
 						result = "FAILED"
 						failedChecks = append(failedChecks, false)
 					} else {
-						result = "OK"
+            if len(check.Signature) != 0 {
+						  result = "OK - " + check.Signature
+            } else {
+						  result = "OK"
+            }
 					}
 					fmt.Printf("%s:%s%s\n", id, sum.DefaultSpacer, result)
 				}

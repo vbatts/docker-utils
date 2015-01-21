@@ -4,7 +4,8 @@ import (
 	"bufio"
 	"io"
 	"os"
-	"strings"
+  "os/exec"
+  "strings"
 
 	"github.com/docker/docker/pkg/tarsum"
 )
@@ -12,7 +13,7 @@ import (
 const DefaultSpacer = "  "
 
 // ReadChecks takes the input and loads the hash/id to be checked
-func ReadChecks(input io.Reader) (Checks, error) {
+func ReadChecks(input io.Reader, signature string) (Checks, error) {
 	rdr := bufio.NewReader(input)
 	checks := Checks{}
 	for {
@@ -31,7 +32,7 @@ func ReadChecks(input io.Reader) (Checks, error) {
 		chunks := strings.SplitN(line, DefaultSpacer, 2)
 		sum, source := chunks[0], chunks[1]
 		i := strings.LastIndex(source, ":")
-		checks = append(checks, Check{Hash: sum, Source: source[:i], Id: strings.TrimSpace(source[i+1:]), Version: v})
+		checks = append(checks, Check{Hash: sum, Source: source[:i], Id: strings.TrimSpace(source[i+1:]), Version: v, Signature: signature})
 	}
 	return checks, nil
 }
@@ -49,17 +50,35 @@ func LoadCheckFiles(paths []string) (Checks, error) {
 }
 
 func LoadCheckFile(path string) (Checks, error) {
-	fh, err := os.Open(path)
+  file_dir, err := exec.Command("/usr/share/dockerkeys/verify.sh",path).Output()
+  if err != nil {
+    return nil, err
+  }
+
+  fields := strings.Split(strings.Replace(string(file_dir[:]),"\r","",-1),"\n")
+  sig := fields[0]
+  filename := fields[1]
+  dir := fields[2]
+
+  if len(sig) == 0 {
+    filename = path
+  }
+
+  defer os.RemoveAll(dir)
+
+	fh, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
-	return ReadChecks(fh)
+
+	return ReadChecks(fh,sig)
 }
 
 type Check struct {
 	Id      string
 	Source  string
 	Hash    string
+  Signature string
 	Seen    bool
 	Version tarsum.Version
 }
