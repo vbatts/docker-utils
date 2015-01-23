@@ -12,7 +12,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/graph"
-	"github.com/docker/docker/opts"
 	"github.com/docker/docker/pkg/archive"
 	flag "github.com/docker/docker/pkg/mflag"
 	"github.com/docker/docker/registry"
@@ -23,6 +22,7 @@ var (
 	timeout            = true
 	debug              = len(os.Getenv("DEBUG")) > 0
 	outputStream       = "-"
+	rOptions           = &registry.Options{}
 )
 
 func init() {
@@ -40,11 +40,15 @@ func init() {
 	flag.BoolVar(&timeout, []string{"t", "-timeout"}, timeout, "allow timeout on the registry session")
 	flag.BoolVar(&debug, []string{"D", "-debug"}, debug, "debugging output")
 	flag.StringVar(&outputStream, []string{"o", "-output"}, outputStream, "output to file (default stdout)")
-	opts.ListVar(&insecureRegistries, []string{"-insecure-registry"}, "Enable insecure communication with specified registries (no certificate verification for HTTPS and enable HTTP fallback) (e.g., localhost:5000 or 10.20.0.0/16) (default to 0.0.0.0/16)")
+
+	rOptions.InstallFlags()
 }
 
 // TODO rewrite this whole PoC
 func main() {
+	flag.Usage = func() {
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 	if debug {
 		log.SetLevel(log.DebugLevel)
@@ -63,47 +67,49 @@ func main() {
 	}
 	defer os.RemoveAll(tempDir)
 
+	sc := registry.NewServiceConfig(rOptions)
+
 	for _, arg := range flag.Args() {
 		var (
-			hostName, imageName, tagName string
-			err                          error
+			tagName string
 		)
 
-		hostName, imageName, err = registry.ResolveRepositoryName(arg)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-
 		// set up image and tag
-		if strings.Contains(imageName, ":") {
-			chunks := strings.SplitN(imageName, ":", 2)
-			imageName = chunks[0]
-			tagName = chunks[1]
+		if strings.Contains(arg, ":") {
+			i := strings.LastIndex(arg, ":")
+			tagName = arg[i+1:]
+			arg = arg[:i]
 		} else {
 			tagName = "latest"
 		}
 
-		indexEndpoint, err := registry.NewEndpoint(hostName, insecureRegistries)
+		repInfo, err := sc.NewRepositoryInfo(arg)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "Pulling %s:%s from %s\n", imageName, tagName, indexEndpoint)
+		//fmt.Fprintf(os.Stderr, "%#v %q\n", repInfo, tagName)
+
+		idx, err := repInfo.GetEndpoint()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "Pulling %s:%s from %s\n", repInfo.CanonicalName, tagName, idx)
 
 		var session *registry.Session
-		if s, ok := sessions[indexEndpoint.String()]; ok {
+		if s, ok := sessions[idx.String()]; ok {
 			session = s
 		} else {
 			// TODO(vbatts) obviously the auth and http factory shouldn't be nil here
-			session, err = registry.NewSession(nil, nil, indexEndpoint, timeout)
+			session, err = registry.NewSession(nil, nil, idx, timeout)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
 		}
 
-		rd, err := session.GetRepositoryData(imageName)
+		rd, err := session.GetRepositoryData(repInfo.CanonicalName)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -111,8 +117,8 @@ func main() {
 		log.Debugf("rd: %#v", rd)
 
 		// produce the "repositories" file for the archive
-		if _, ok := repositories[imageName]; !ok {
-			repositories[imageName] = graph.Repository{}
+		if _, ok := repositories[repInfo.CanonicalName]; !ok {
+			repositories[repInfo.CanonicalName] = graph.Repository{}
 		}
 		log.Debugf("repositories: %#v", repositories)
 
@@ -120,17 +126,17 @@ func main() {
 			log.Fatalf("expected registry endpoints, but received none from the index")
 		}
 
-		tags, err := session.GetRemoteTags(rd.Endpoints, imageName, rd.Tokens)
+		tags, err := session.GetRemoteTags(rd.Endpoints, repInfo.CanonicalName, rd.Tokens)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		if hash, ok := tags[tagName]; ok {
-			repositories[imageName][tagName] = hash
+			repositories[repInfo.CanonicalName][tagName] = hash
 		}
 		log.Debugf("repositories: %#v", repositories)
 
-		imgList, err := session.GetRemoteHistory(repositories[imageName][tagName], rd.Endpoints[0], rd.Tokens)
+		imgList, err := session.GetRemoteHistory(repositories[repInfo.CanonicalName][tagName], rd.Endpoints[0], rd.Tokens)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
