@@ -51,6 +51,7 @@ func main() {
 	}
 	flag.Parse()
 	if debug {
+		os.Setenv("DEBUG", "1")
 		log.SetLevel(log.DebugLevel)
 	}
 
@@ -80,7 +81,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "%#v %q\n", repInfo, tagName)
+		log.Debugf("%#v %q\n", repInfo, tagName)
 
 		idx, err := repInfo.GetEndpoint()
 		if err != nil {
