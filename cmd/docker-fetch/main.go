@@ -8,12 +8,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/graph"
 	"github.com/docker/docker/pkg/archive"
 	flag "github.com/docker/docker/pkg/mflag"
+	"github.com/docker/docker/pkg/parsers"
 	"github.com/docker/docker/registry"
 )
 
@@ -70,32 +70,24 @@ func main() {
 	sc := registry.NewServiceConfig(rOptions)
 
 	for _, arg := range flag.Args() {
-		var (
-			tagName string
-		)
-
-		// set up image and tag
-		if strings.Contains(arg, ":") {
-			i := strings.LastIndex(arg, ":")
-			tagName = arg[i+1:]
-			arg = arg[:i]
-		} else {
+		remote, tagName := parsers.ParseRepositoryTag(arg)
+		if tagName == "" {
 			tagName = "latest"
 		}
 
-		repInfo, err := sc.NewRepositoryInfo(arg)
+		repInfo, err := sc.NewRepositoryInfo(remote)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		//fmt.Fprintf(os.Stderr, "%#v %q\n", repInfo, tagName)
+		fmt.Fprintf(os.Stderr, "%#v %q\n", repInfo, tagName)
 
 		idx, err := repInfo.GetEndpoint()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "Pulling %s:%s from %s\n", repInfo.CanonicalName, tagName, idx)
+		fmt.Fprintf(os.Stderr, "Pulling %s:%s from %s\n", repInfo.RemoteName, tagName, idx)
 
 		var session *registry.Session
 		if s, ok := sessions[idx.String()]; ok {
@@ -109,7 +101,7 @@ func main() {
 			}
 		}
 
-		rd, err := session.GetRepositoryData(repInfo.CanonicalName)
+		rd, err := session.GetRepositoryData(repInfo.RemoteName)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -117,8 +109,8 @@ func main() {
 		log.Debugf("rd: %#v", rd)
 
 		// produce the "repositories" file for the archive
-		if _, ok := repositories[repInfo.CanonicalName]; !ok {
-			repositories[repInfo.CanonicalName] = graph.Repository{}
+		if _, ok := repositories[repInfo.RemoteName]; !ok {
+			repositories[repInfo.RemoteName] = graph.Repository{}
 		}
 		log.Debugf("repositories: %#v", repositories)
 
@@ -126,17 +118,17 @@ func main() {
 			log.Fatalf("expected registry endpoints, but received none from the index")
 		}
 
-		tags, err := session.GetRemoteTags(rd.Endpoints, repInfo.CanonicalName, rd.Tokens)
+		tags, err := session.GetRemoteTags(rd.Endpoints, repInfo.RemoteName, rd.Tokens)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		if hash, ok := tags[tagName]; ok {
-			repositories[repInfo.CanonicalName][tagName] = hash
+			repositories[repInfo.RemoteName][tagName] = hash
 		}
 		log.Debugf("repositories: %#v", repositories)
 
-		imgList, err := session.GetRemoteHistory(repositories[repInfo.CanonicalName][tagName], rd.Endpoints[0], rd.Tokens)
+		imgList, err := session.GetRemoteHistory(repositories[repInfo.RemoteName][tagName], rd.Endpoints[0], rd.Tokens)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
