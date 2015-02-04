@@ -2,6 +2,7 @@ package registry
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -70,7 +71,16 @@ func extractTar(r *Registry, in io.Reader, tarsums bool) error {
 				return err
 			}
 			if !tarsums {
-				if _, err = io.Copy(layer_fh, t); err != nil {
+				// generating tarsums also gzip compresses the archive, so we need
+				// to do that manually if not using tarsums
+				layer_gz, err := gzip.NewWriterLevel(layer_fh, gzip.BestCompression)
+				if err != nil {
+					return err
+				}
+				if _, err = io.Copy(layer_gz, t); err != nil {
+					return err
+				}
+				if err = layer_gz.Close(); err != nil {
 					return err
 				}
 				if err = layer_fh.Close(); err != nil {
