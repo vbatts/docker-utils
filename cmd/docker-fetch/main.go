@@ -54,6 +54,11 @@ func main() {
 		os.Setenv("DEBUG", "1")
 		log.SetLevel(log.DebugLevel)
 	}
+	if flag.NArg() == 0 {
+		fmt.Println("ERROR: no image names provided")
+		flag.Usage()
+		os.Exit(1)
+	}
 
 	var (
 		sessions     map[string]*registry.Session
