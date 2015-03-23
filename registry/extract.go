@@ -2,6 +2,7 @@ package registry
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,6 +18,14 @@ import (
 From a tar input, push it to the registry.Registry r
 */
 func ExtractTar(r *Registry, in io.Reader) error {
+	return extractTar(r, in, true)
+}
+
+func ExtractTarWithoutTarsums(r *Registry, in io.Reader) error {
+	return extractTar(r, in, false)
+}
+
+func extractTar(r *Registry, in io.Reader, tarsums bool) error {
 	t := tar.NewReader(in)
 
 	for {
@@ -60,6 +69,25 @@ func ExtractTar(r *Registry, in io.Reader) error {
 			layer_fh, err := os.Create(r.LayerFileName(hashid))
 			if err != nil {
 				return err
+			}
+			if !tarsums {
+				// generating tarsums also gzip compresses the archive, so we need
+				// to do that manually if not using tarsums
+				layer_gz, err := gzip.NewWriterLevel(layer_fh, gzip.BestCompression)
+				if err != nil {
+					return err
+				}
+				if _, err = io.Copy(layer_gz, t); err != nil {
+					return err
+				}
+				if err = layer_gz.Close(); err != nil {
+					return err
+				}
+				if err = layer_fh.Close(); err != nil {
+					return err
+				}
+				fmt.Printf("Extracted Layer: %s\n", hashid)
+				continue
 			}
 			json_fh, err := os.Open(r.JsonFileName(hashid))
 			if err != nil {
@@ -161,9 +189,13 @@ func ExtractTar(r *Registry, in io.Reader) error {
 					}
 
 					imageExisted := false
-					checksum, err := r.LayerTarsum(hashid)
-					if err != nil {
-						return err
+
+					var checksum string
+					if tarsums {
+						checksum, err = r.LayerTarsum(hashid)
+						if err != nil {
+							return err
+						}
 					}
 					for _, e_image := range images {
 						if e_image.Id == hashid {
