@@ -60,11 +60,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	var (
-		sessions     map[string]*registry.Session
-		repositories = map[string]graph.Repository{}
-	)
-
 	// make tempDir
 	tempDir, err := ioutil.TempDir("", "docker-fetch-")
 	if err != nil {
@@ -73,6 +68,7 @@ func main() {
 	}
 	defer os.RemoveAll(tempDir)
 
+	fetcher := NewFetcher(tempDir)
 	sc := registry.NewServiceConfig(rOptions)
 
 	for _, arg := range flag.Args() {
@@ -96,7 +92,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Pulling %s:%s from %s\n", repInfo.RemoteName, tagName, idx)
 
 		var session *registry.Session
-		if s, ok := sessions[idx.String()]; ok {
+		if s, ok := fetcher.sessions[idx.String()]; ok {
 			session = s
 		} else {
 			// TODO(vbatts) obviously the auth and http factory shouldn't be nil here
@@ -115,10 +111,10 @@ func main() {
 		log.Debugf("rd: %#v", rd)
 
 		// produce the "repositories" file for the archive
-		if _, ok := repositories[repInfo.RemoteName]; !ok {
-			repositories[repInfo.RemoteName] = graph.Repository{}
+		if _, ok := fetcher.repositories[repInfo.RemoteName]; !ok {
+			fetcher.repositories[repInfo.RemoteName] = graph.Repository{}
 		}
-		log.Debugf("repositories: %#v", repositories)
+		log.Debugf("repositories: %#v", fetcher.repositories)
 
 		if len(rd.Endpoints) == 0 {
 			log.Fatalf("expected registry endpoints, but received none from the index")
@@ -130,11 +126,11 @@ func main() {
 			os.Exit(1)
 		}
 		if hash, ok := tags[tagName]; ok {
-			repositories[repInfo.RemoteName][tagName] = hash
+			fetcher.repositories[repInfo.RemoteName][tagName] = hash
 		}
-		log.Debugf("repositories: %#v", repositories)
+		log.Debugf("repositories: %#v", fetcher.repositories)
 
-		imgList, err := session.GetRemoteHistory(repositories[repInfo.RemoteName][tagName], rd.Endpoints[0], rd.Tokens)
+		imgList, err := session.GetRemoteHistory(fetcher.repositories[repInfo.RemoteName][tagName], rd.Endpoints[0], rd.Tokens)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -148,11 +144,11 @@ func main() {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
-			if err = os.MkdirAll(filepath.Join(tempDir, imgID), 0755); err != nil {
+			if err = os.MkdirAll(filepath.Join(fetcher.Root, imgID), 0755); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
-			fh, err := os.Create(filepath.Join(tempDir, imgID, "json"))
+			fh, err := os.Create(filepath.Join(fetcher.Root, imgID, "json"))
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
@@ -169,7 +165,7 @@ func main() {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
-			fh, err = os.Create(filepath.Join(tempDir, imgID, "layer.tar"))
+			fh, err = os.Create(filepath.Join(fetcher.Root, imgID, "layer.tar"))
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
@@ -207,13 +203,13 @@ func main() {
 	}
 
 	// marshal the "repositories" file for writing out
-	log.Debugf("repositories: %q", repositories)
-	buf, err := json.Marshal(repositories)
+	log.Debugf("repositories: %q", fetcher.repositories)
+	buf, err := json.Marshal(fetcher.repositories)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	fh, err := os.Create(filepath.Join(tempDir, "repositories"))
+	fh, err := os.Create(filepath.Join(fetcher.Root, "repositories"))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -237,7 +233,7 @@ func main() {
 	}
 	defer output.Close()
 
-	if err = os.Chdir(tempDir); err != nil {
+	if err = os.Chdir(fetcher.Root); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
