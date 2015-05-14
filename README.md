@@ -11,7 +11,7 @@ When you want to inspect the resemblances of a Dockerfile from a local Docker im
 
 ### Installing
 
-	go get github.com/vbatts/docker-utils/cmd/dockertarsum
+	go get github.com/vbatts/docker-utils/cmd/docker-save-dockerfile
 
 ### Usage
 
