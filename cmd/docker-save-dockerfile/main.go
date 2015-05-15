@@ -15,7 +15,8 @@ import (
 )
 
 var (
-	flVerbose = flag.Bool("v", false, "turn on verbose debug")
+	flVerbose   = flag.Bool("v", false, "turn on verbose debug")
+	flOutputDir = flag.String("o", "", "directory to output Dockerfile.XXX to")
 )
 
 func main() {
@@ -103,9 +104,13 @@ func main() {
 
 	// build a reverse list of instructions from these child Layers
 	// write these Dockerfile.XXX with these instructions
-	tdir, err := ioutil.TempDir("", "docker-save-dockerfile.")
-	if err != nil {
-		logrus.Fatal(err)
+	var tdir string = *flOutputDir
+	if tdir == "" {
+		var err error
+		tdir, err = ioutil.TempDir("", "docker-save-dockerfile.")
+		if err != nil {
+			logrus.Fatal(err)
+		}
 	}
 
 	for _, df := range dockerfiles {
