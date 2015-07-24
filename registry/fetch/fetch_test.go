@@ -2,12 +2,14 @@ package registry
 
 import (
 	"io/ioutil"
+	"os"
+	"path"
 	"testing"
 )
 
 func TestRegistryFetchToken(t *testing.T) {
 	r := NewRegistry(DefaultRegistryHost)
-	tok, err := r.Token(NewImageRef("vbatts/slackware"))
+	tok, err := r.Token(NewImageRef("tianon/true"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +25,7 @@ func TestRegistryFetchToken(t *testing.T) {
 }
 func TestRegistryFetchImageID(t *testing.T) {
 	r := NewRegistry(DefaultRegistryHost)
-	id, err := r.ImageID(NewImageRef("vbatts/slackware"))
+	id, err := r.ImageID(NewImageRef("tianon/true"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +35,7 @@ func TestRegistryFetchImageID(t *testing.T) {
 }
 func TestRegistryFetchAncestry(t *testing.T) {
 	r := NewRegistry(DefaultRegistryHost)
-	ids, err := r.Ancestry(NewImageRef("vbatts/slackware"))
+	ids, err := r.Ancestry(NewImageRef("tianon/true"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,10 +49,16 @@ func TestRegistryFetchLayers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = r.FetchLayers(NewImageRef("vbatts/slackware"), tdir)
+	defer os.RemoveAll(tdir)
+
+	layersFetched, err := r.FetchLayers(NewImageRef("tianon/true"), tdir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Fatal(tdir)
+	for _, id := range layersFetched {
+		if _, err := os.Stat(path.Join(tdir, id, "json")); err != nil {
+			t.Error(err)
+		}
+	}
 }

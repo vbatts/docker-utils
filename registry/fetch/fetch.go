@@ -213,7 +213,7 @@ func (re *RegistryEndpoint) Ancestry(img *ImageRef) ([]string, error) {
 	return img.Ancestry(), nil
 }
 
-// This is presently fetching docker-registry v1 API
+// This is presently fetching docker-registry v1 API and returns the IDs of the layers fetched from the registry
 func (re *RegistryEndpoint) FetchLayers(img *ImageRef, dest string) ([]string, error) {
 	emptySet := []string{}
 	if _, ok := re.tokens[img.Name()]; !ok {
