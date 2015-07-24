@@ -9,6 +9,8 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/Sirupsen/logrus"
 )
 
 var DefaultRegistryHost = "index.docker.io"
@@ -109,7 +111,7 @@ func (re *RegistryEndpoint) Token(img *ImageRef) (Token, error) {
 		return emptyToken, fmt.Errorf("Get(%q) returned %q", url, resp.Status)
 	}
 
-	//logrus.Infof("%#v", resp)
+	//logrus.Debugf("%#v", resp)
 
 	// looking for header: X-Docker-Token: signature=4709c3e8d96f6a0e9fa53bd205b5be171ac9ade0,repository="vbatts/slackware",access=read
 	tok := resp.Header.Get("X-Docker-Token")
@@ -152,7 +154,7 @@ func (re *RegistryEndpoint) ImageID(img *ImageRef) (string, error) {
 		return "", fmt.Errorf("Get(%q) returned %q", url, resp.Status)
 	}
 
-	//logrus.Infof("%#v", resp)
+	//logrus.Debugf("%#v", resp)
 	buf, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
@@ -197,7 +199,7 @@ func (re *RegistryEndpoint) Ancestry(img *ImageRef) ([]string, error) {
 		return emptySet, fmt.Errorf("Get(%q) returned %q", url, resp.Status)
 	}
 
-	//logrus.Infof("%#v", resp)
+	//logrus.Debugf("%#v", resp)
 	buf, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return emptySet, err
@@ -211,6 +213,7 @@ func (re *RegistryEndpoint) Ancestry(img *ImageRef) ([]string, error) {
 	return img.Ancestry(), nil
 }
 
+// This is presently fetching docker-registry v1 API
 func (re *RegistryEndpoint) FetchLayers(img *ImageRef, dest string) ([]string, error) {
 	emptySet := []string{}
 	if _, ok := re.tokens[img.Name()]; !ok {
@@ -234,12 +237,13 @@ func (re *RegistryEndpoint) FetchLayers(img *ImageRef, dest string) ([]string, e
 		endpoint = re.endpoints[0]
 	}
 	for _, id := range img.Ancestry() {
+		logrus.Debugf("Fetching layer %s", id)
 		if err := os.MkdirAll(path.Join(dest, id), 0755); err != nil {
 			return emptySet, err
 		}
 		// get the json file first
 		err := func() error {
-			url := fmt.Sprintf("https://%s/v1/images/%s/json", endpoint, img.ID())
+			url := fmt.Sprintf("https://%s/v1/images/%s/json", endpoint, id)
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				return err
@@ -256,7 +260,7 @@ func (re *RegistryEndpoint) FetchLayers(img *ImageRef, dest string) ([]string, e
 				return fmt.Errorf("Get(%q) returned %q", url, resp.Status)
 			}
 
-			//logrus.Infof("%#v", resp)
+			//logrus.Debugf("%#v", resp)
 			fh, err := os.Create(path.Join(dest, id, "json"))
 			if err != nil {
 				return err
@@ -272,40 +276,40 @@ func (re *RegistryEndpoint) FetchLayers(img *ImageRef, dest string) ([]string, e
 		}
 
 		// get the layer file next
-		/*
-			err := func() err {
-				url := fmt.Sprintf("https://%s/v1/images/%s/json", endpoint, img.ID())
-				req, err := http.NewRequest("GET", url, nil)
-				if err != nil {
-					return err
-				}
-				req.Header.Add("Authorization", fmt.Sprintf("Token %s", re.tokens[img.Name()]))
-
-				resp, err := http.DefaultClient.Do(req)
-				if err != nil {
-					return err
-				}
-				defer resp.Body.Close()
-
-				if resp.StatusCode != http.StatusOK {
-					return fmt.Errorf("Get(%q) returned %q", url, resp.Status)
-				}
-
-				//logrus.Infof("%#v", resp)
-				fh, err := os.Create(path.Join(dest, id, "json"))
-				if err != nil {
-					return err
-				}
-				defer fh.Close()
-				if _, err := io.Copy(fh, resp.Body); err != nil {
-					return err
-				}
-				return nil
-			}()
+		err = func() error {
+			url := fmt.Sprintf("https://%s/v1/images/%s/layer", endpoint, id)
+			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
-				return emptySet, err
+				return err
 			}
-		*/
+			logrus.Debugf("%q", fmt.Sprintf("Token %s", re.tokens[img.Name()]))
+			req.Header.Add("Authorization", fmt.Sprintf("Token %s", re.tokens[img.Name()]))
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("Get(%q) returned %q", url, resp.Status)
+			}
+
+			logrus.Debugf("[FetchLayers] ended up at %q", resp.Request.URL.String())
+			logrus.Debugf("[FetchLayers] response %#v", resp)
+			fh, err := os.Create(path.Join(dest, id, "layer.tar"))
+			if err != nil {
+				return err
+			}
+			defer fh.Close()
+			if _, err := io.Copy(fh, resp.Body); err != nil {
+				return err
+			}
+			return nil
+		}()
+		if err != nil {
+			return emptySet, err
+		}
 	}
 
 	return img.Ancestry(), nil
