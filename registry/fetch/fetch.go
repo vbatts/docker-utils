@@ -1,4 +1,4 @@
-package registry
+package fetch
 
 import (
 	"encoding/json"
