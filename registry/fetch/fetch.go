@@ -13,7 +13,10 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-var DefaultRegistryHost = "index.docker.io"
+var (
+	DefaultRegistryHost = "index.docker.io"
+	DefaultHubNamespace = "docker.io"
+)
 
 func NewImageRef(name string) *ImageRef {
 	return &ImageRef{orig: name}
@@ -28,7 +31,16 @@ type ImageRef struct {
 }
 
 func (ir ImageRef) Host() string {
-	return ""
+	// if there are 2 or more slashes and the first element includes a period
+	if strings.Count(ir.orig, "/") > 0 {
+		// first element
+		el := strings.Split(ir.orig, "/")[0]
+		// it looks like an address or is localhost
+		if strings.Contains(el, ".") || el == "localhost" || strings.Contains(el, ":") {
+			return el
+		}
+	}
+	return DefaultHubNamespace
 }
 
 func (ir ImageRef) ID() string {
@@ -79,6 +91,9 @@ func (ir ImageRef) String() string {
 }
 
 func NewRegistry(host string) RegistryEndpoint {
+	if host == "docker.io" {
+		host = DefaultRegistryHost
+	}
 	return RegistryEndpoint{
 		Host:      host,
 		tokens:    map[string]Token{},
@@ -211,6 +226,22 @@ func (re *RegistryEndpoint) Ancestry(img *ImageRef) ([]string, error) {
 	}
 	img.SetAncestry(set)
 	return img.Ancestry(), nil
+}
+
+// Return the `repositories` file format data for the referenced image
+func (re *RegistryEndpoint) FormatRepositories(img *ImageRef) ([]byte, error) {
+	if img.ID() == "" {
+		if _, err := re.ImageID(img); err != nil {
+			return nil, err
+		}
+	}
+	// {"busybox":{"latest":"4986bf8c15363d1c5d15512d5266f8777bfba4974ac56e3270e7760f6f0a8125"}}
+	repoInfo := map[string]map[string]string{
+		img.Name(): map[string]string{
+			img.Tag(): img.ID(),
+		},
+	}
+	return json.Marshal(repoInfo)
 }
 
 // This is presently fetching docker-registry v1 API and returns the IDs of the layers fetched from the registry
