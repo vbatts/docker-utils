@@ -109,4 +109,5 @@ func TestRegistryImageRepositoriesFile(t *testing.T) {
 	if len(buf) == 0 {
 		t.Errorf("expected a populated `repositories` info")
 	}
+	// TODO test multiple ImageRef arguments
 }

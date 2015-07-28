@@ -105,7 +105,7 @@ func (ir ImageRef) Digest() string {
 }
 
 func (ir ImageRef) String() string {
-	return ir.orig
+	return ir.Host() + "/" + ir.Name() + ":" + ir.Tag()
 }
 
 func NewRegistry(host string) RegistryEndpoint {
@@ -247,17 +247,22 @@ func (re *RegistryEndpoint) Ancestry(img *ImageRef) ([]string, error) {
 }
 
 // Return the `repositories` file format data for the referenced image
-func (re *RegistryEndpoint) FormatRepositories(img *ImageRef) ([]byte, error) {
-	if img.ID() == "" {
-		if _, err := re.ImageID(img); err != nil {
-			return nil, err
+func (re *RegistryEndpoint) FormatRepositories(refs ...*ImageRef) ([]byte, error) {
+	for _, ref := range refs {
+		if ref.ID() == "" {
+			if _, err := re.ImageID(ref); err != nil {
+				return nil, err
+			}
 		}
 	}
 	// {"busybox":{"latest":"4986bf8c15363d1c5d15512d5266f8777bfba4974ac56e3270e7760f6f0a8125"}}
-	repoInfo := map[string]map[string]string{
-		img.Name(): map[string]string{
-			img.Tag(): img.ID(),
-		},
+	repoInfo := map[string]map[string]string{}
+	for _, ref := range refs {
+		if repoInfo[ref.Name()] == nil {
+			repoInfo[ref.Name()] = map[string]string{ref.Tag(): ref.ID()}
+		} else {
+			repoInfo[ref.Name()][ref.Tag()] = ref.ID()
+		}
 	}
 	return json.Marshal(repoInfo)
 }
