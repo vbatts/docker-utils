@@ -62,12 +62,16 @@ func (ir *ImageRef) SetAncestry(ids []string) {
 	}
 }
 func (ir ImageRef) Name() string {
-	count := strings.Count(ir.orig, ":")
+	// trim off the hostname plus the slash
+	name := strings.TrimPrefix(ir.orig, ir.Host()+"/")
+
+	// check for any tags
+	count := strings.Count(name, ":")
 	if count == 0 {
-		return ir.orig
+		return name
 	}
 	if count == 1 {
-		return strings.Split(ir.orig, ":")[0]
+		return strings.Split(name, ":")[0]
 	}
 	return ""
 }
