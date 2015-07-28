@@ -16,6 +16,7 @@ import (
 var (
 	DefaultRegistryHost = "index.docker.io"
 	DefaultHubNamespace = "docker.io"
+	DefaultTag          = "latest"
 )
 
 func NewImageRef(name string) *ImageRef {
@@ -26,6 +27,7 @@ type ImageRef struct {
 	orig     string
 	name     string
 	tag      string
+	digest   string
 	id       string
 	ancestry []string
 }
@@ -75,14 +77,26 @@ func (ir ImageRef) Tag() string {
 	}
 	count := strings.Count(ir.orig, ":")
 	if count == 0 {
-		return "latest"
+		return DefaultTag
+	}
+	if c := strings.Count(ir.orig, "/"); c > 0 {
+		el := strings.Split(ir.orig, "/")[c]
+		if strings.Contains(el, ":") {
+			return strings.Split(el, ":")[1]
+		} else {
+			return DefaultTag
+		}
 	}
 	if count == 1 {
 		return strings.Split(ir.orig, ":")[1]
 	}
 	return ""
 }
+
 func (ir ImageRef) Digest() string {
+	if ir.digest != "" {
+		return ir.digest
+	}
 	return ""
 }
 

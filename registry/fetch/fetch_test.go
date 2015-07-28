@@ -8,39 +8,38 @@ import (
 )
 
 func TestImageRefHost(t *testing.T) {
-	/*
-					   - docker.io/tianon/true
-					   - docker.io/golang
-				     - tianon/true
-		         - fedora
-		         - localhost:5000/fedora
-		         - 192.168.1.23:5000/fedora
-		         - 192.168.1.23/fedora
-	*/
 	cases := []struct {
-		Name     string
-		Expected string
+		Name         string
+		ExpectedHost string
+		ExpectedName string
+		ExpectedTag  string
 	}{
-		{"docker.io/tianon/true", DefaultHubNamespace},
-		{"docker.io:80/tianon/true", DefaultHubNamespace + ":80"},
-		{"docker.io/tianon/true:latest", DefaultHubNamespace},
-		{"tianon/true", DefaultHubNamespace},
-		{"tianon/true:latest", DefaultHubNamespace},
-		{"fedora:latest", DefaultHubNamespace},
-		{"localhost:5000/fedora", "localhost:5000"},
-		{"localhost:5000/fedora:latest", "localhost:5000"},
-		{"localhost/fedora", "localhost"},
-		{"localhost/fedora:latest", "localhost"},
-		{"192.168.1.23:5000/tianon/true", "192.168.1.23:5000"},
-		{"192.168.1.23:5000/fedora", "192.168.1.23:5000"},
-		{"192.168.1.23/fedora", "192.168.1.23"},
-		{"192.168.1.23/fedora:latest", "192.168.1.23"},
-		{"192.168.1.23/library/fedora", "192.168.1.23"},
+		{"docker.io/tianon/true", DefaultHubNamespace, "tianon/true", DefaultTag},
+		{"docker.io:80/tianon/true", DefaultHubNamespace + ":80", "tianon/true", DefaultTag},
+		{"docker.io/tianon/true:hurr", DefaultHubNamespace, "tianon/true", "hurr"},
+		{"tianon/true", DefaultHubNamespace, "tianon/true", DefaultTag},
+		{"tianon/true:latest", DefaultHubNamespace, "tianon/true", DefaultTag},
+		{"fedora:latest", DefaultHubNamespace, "fedora", DefaultTag},
+		{"localhost:5000/fedora", "localhost:5000", "fedora", DefaultTag},
+		{"localhost:5000/fedora:latest", "localhost:5000", "fedora", DefaultTag},
+		{"localhost/fedora", "localhost", "fedora", DefaultTag},
+		{"localhost/fedora:latest", "localhost", "fedora", DefaultTag},
+		{"192.168.1.23:5000/tianon/true", "192.168.1.23:5000", "tianon/true", DefaultTag},
+		{"192.168.1.23:5000/fedora", "192.168.1.23:5000", "fedora", DefaultTag},
+		{"192.168.1.23/fedora", "192.168.1.23", "fedora", DefaultTag},
+		{"192.168.1.23/fedora:latest", "192.168.1.23", "fedora", DefaultTag},
+		{"192.168.1.23/library/fedora", "192.168.1.23", "library/fedora", DefaultTag},
 	}
 	for _, c := range cases {
 		ref := NewImageRef(c.Name)
-		if ref.Host() != c.Expected {
-			t.Errorf("from %q: expected %q, got %q", c.Name, c.Expected, ref.Host())
+		if ref.Host() != c.ExpectedHost {
+			t.Errorf("from %q: expected %q, got %q", c.Name, c.ExpectedHost, ref.Host())
+		}
+		if ref.Name() != c.ExpectedName {
+			t.Errorf("from %q: expected %q, got %q", c.Name, c.ExpectedName, ref.Name())
+		}
+		if ref.Tag() != c.ExpectedTag {
+			t.Errorf("from %q: expected %q, got %q", c.Name, c.ExpectedTag, ref.Tag())
 		}
 	}
 }
