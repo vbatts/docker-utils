@@ -7,14 +7,19 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/docker/registry"
 	"github.com/vbatts/docker-utils/version"
 )
 
 type Registry struct {
 	Version string
 	Path    string
-	Info    registry.RegistryInfo
+	Info    RegistryInfo
+}
+
+// copied from docker/registry around 1.6.0
+type RegistryInfo struct {
+	Version    string `json:"version"`
+	Standalone bool   `json:"standalone"`
 }
 
 func (r *Registry) Init() error {
