@@ -1,5 +1,7 @@
 # docker-utils
 
+[![Build Status](https://travis-ci.org/vbatts/docker-utils.svg?branch=master)](https://travis-ci.org/vbatts/docker-utils)
+
 External-to-docker utilities to provide a more complete experience
 
 
