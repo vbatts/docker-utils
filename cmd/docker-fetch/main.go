@@ -1,20 +1,16 @@
 package main
 
 import (
-	"compress/gzip"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/docker/docker/graph"
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/pkg/archive"
 	flag "github.com/docker/docker/pkg/mflag"
-	"github.com/docker/docker/pkg/parsers"
-	"github.com/docker/docker/registry"
+	"github.com/vbatts/docker-utils/registry/fetch"
 )
 
 var (
@@ -22,29 +18,24 @@ var (
 	timeout            = true
 	debug              = len(os.Getenv("DEBUG")) > 0
 	outputStream       = "-"
-	rOptions           = &registry.Options{}
 )
 
 func init() {
-	log.SetFormatter(&log.JSONFormatter{})
+	logrus.SetFormatter(&logrus.JSONFormatter{})
 
 	// Output to stderr instead of stdout, could also be a file.
-	log.SetOutput(os.Stderr)
+	logrus.SetOutput(os.Stderr)
 
 	// Only log the warning severity or above.
-	log.SetLevel(log.WarnLevel)
+	logrus.SetLevel(logrus.WarnLevel)
 
 	// XXX print a warning that this tool is not stable yet
-	fmt.Fprintln(os.Stderr, "WARNING: this tool is not stable yet, and should only be used for testing!")
+	logrus.Warn("This tool is not stable yet, and should only be used for testing!")
 
-	flag.BoolVar(&timeout, []string{"t", "-timeout"}, timeout, "allow timeout on the registry session")
 	flag.BoolVar(&debug, []string{"D", "-debug"}, debug, "debugging output")
 	flag.StringVar(&outputStream, []string{"o", "-output"}, outputStream, "output to file (default stdout)")
-
-	rOptions.InstallFlags()
 }
 
-// TODO rewrite this whole PoC
 func main() {
 	flag.Usage = func() {
 		flag.PrintDefaults()
@@ -52,174 +43,48 @@ func main() {
 	flag.Parse()
 	if debug {
 		os.Setenv("DEBUG", "1")
-		log.SetLevel(log.DebugLevel)
+		logrus.SetLevel(logrus.DebugLevel)
 	}
 	if flag.NArg() == 0 {
-		fmt.Println("ERROR: no image names provided")
 		flag.Usage()
-		os.Exit(1)
+		logrus.Fatal("no image names provided")
 	}
 
-	// make tempDir
-	tempDir, err := ioutil.TempDir("", "docker-fetch-")
+	// make temporary working directory
+	tempFetchRoot, err := ioutil.TempDir("", "docker-fetch-")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
-	defer os.RemoveAll(tempDir)
 
-	fetcher := NewFetcher(tempDir)
-	sc := registry.NewServiceConfig(rOptions)
-
+	refs := []*fetch.ImageRef{}
 	for _, arg := range flag.Args() {
-		remote, tagName := parsers.ParseRepositoryTag(arg)
-		if tagName == "" {
-			tagName = "latest"
-		}
+		ref := fetch.NewImageRef(arg)
+		fmt.Fprintf(os.Stderr, "Pulling %s\n", ref)
+		r := fetch.NewRegistry(ref.Host())
 
-		repInfo, err := sc.NewRepositoryInfo(remote)
+		layersFetched, err := r.FetchLayers(ref, tempFetchRoot)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			logrus.Errorf("failed pulling %s, skipping: %s", ref, err)
+			continue
 		}
-		log.Debugf("%#v %q\n", repInfo, tagName)
-
-		idx, err := repInfo.GetEndpoint()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		fmt.Fprintf(os.Stderr, "Pulling %s:%s from %s\n", repInfo.RemoteName, tagName, idx)
-
-		var session *registry.Session
-		if s, ok := fetcher.sessions[idx.String()]; ok {
-			session = s
-		} else {
-			// TODO(vbatts) obviously the auth and http factory shouldn't be nil here
-			session, err = registry.NewSession(nil, nil, idx, timeout)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-		}
-
-		rd, err := session.GetRepositoryData(repInfo.RemoteName)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		log.Debugf("rd: %#v", rd)
-
-		// produce the "repositories" file for the archive
-		if _, ok := fetcher.repositories[repInfo.RemoteName]; !ok {
-			fetcher.repositories[repInfo.RemoteName] = graph.Repository{}
-		}
-		log.Debugf("repositories: %#v", fetcher.repositories)
-
-		if len(rd.Endpoints) == 0 {
-			log.Fatalf("expected registry endpoints, but received none from the index")
-		}
-
-		tags, err := session.GetRemoteTags(rd.Endpoints, repInfo.RemoteName, rd.Tokens)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		if hash, ok := tags[tagName]; ok {
-			fetcher.repositories[repInfo.RemoteName][tagName] = hash
-		}
-		log.Debugf("repositories: %#v", fetcher.repositories)
-
-		imgList, err := session.GetRemoteHistory(fetcher.repositories[repInfo.RemoteName][tagName], rd.Endpoints[0], rd.Tokens)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		log.Debugf("imgList: %#v", imgList)
-
-		for _, imgID := range imgList {
-			// pull layers and jsons
-			buf, _, err := session.GetRemoteImageJSON(imgID, rd.Endpoints[0], rd.Tokens)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			if err = os.MkdirAll(filepath.Join(fetcher.Root, imgID), 0755); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			fh, err := os.Create(filepath.Join(fetcher.Root, imgID, "json"))
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			if _, err = fh.Write(buf); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			fh.Close()
-			log.Debugf("%s", fh.Name())
-
-			tarRdr, err := session.GetRemoteImageLayer(imgID, rd.Endpoints[0], rd.Tokens, 0)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			fh, err = os.Create(filepath.Join(fetcher.Root, imgID, "layer.tar"))
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			// the body is usually compressed
-			gzRdr, err := gzip.NewReader(tarRdr)
-			if err != nil {
-				log.Debugf("image layer for %q is not gzipped", imgID)
-				// the archive may not be gzipped, so just copy the stream
-				if _, err = io.Copy(fh, tarRdr); err != nil {
-					fmt.Fprintln(os.Stderr, err)
-					os.Exit(1)
-				}
-			} else {
-				// no error, so gzip decompress the stream
-				if _, err = io.Copy(fh, gzRdr); err != nil {
-					fmt.Fprintln(os.Stderr, err)
-					os.Exit(1)
-				}
-				if err = gzRdr.Close(); err != nil {
-					fmt.Fprintln(os.Stderr, err)
-					os.Exit(1)
-				}
-			}
-			if err = tarRdr.Close(); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			if err = fh.Close(); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			log.Debugf("%s", fh.Name())
-		}
+		logrus.Debugf("fetched %d layers for %s", len(layersFetched), ref)
+		refs = append(refs, ref)
 	}
 
 	// marshal the "repositories" file for writing out
-	log.Debugf("repositories: %q", fetcher.repositories)
-	buf, err := json.Marshal(fetcher.repositories)
+	buf, err := fetch.FormatRepositories(refs...)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
-	fh, err := os.Create(filepath.Join(fetcher.Root, "repositories"))
+	fh, err := os.Create(filepath.Join(tempFetchRoot, "repositories"))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 	if _, err = fh.Write(buf); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 	fh.Close()
-	log.Debugf("%s", fh.Name())
+	logrus.Debugf("%s", fh.Name())
 
 	var output io.WriteCloser
 	if outputStream == "-" {
@@ -227,23 +92,19 @@ func main() {
 	} else {
 		output, err = os.Create(outputStream)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			logrus.Fatal(err)
 		}
 	}
 	defer output.Close()
 
-	if err = os.Chdir(fetcher.Root); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	if err = os.Chdir(tempFetchRoot); err != nil {
+		logrus.Fatal(err)
 	}
 	tarStream, err := archive.Tar(".", archive.Uncompressed)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 	if _, err = io.Copy(output, tarStream); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 }
