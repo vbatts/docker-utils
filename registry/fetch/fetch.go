@@ -247,9 +247,11 @@ func (re *RegistryEndpoint) Ancestry(img *ImageRef) ([]string, error) {
 }
 
 // Return the `repositories` file format data for the referenced image
-func (re *RegistryEndpoint) FormatRepositories(refs ...*ImageRef) ([]byte, error) {
+func FormatRepositories(refs ...*ImageRef) ([]byte, error) {
+	// new Registry, ref.Host function
 	for _, ref := range refs {
 		if ref.ID() == "" {
+			re := NewRegistry(ref.Host())
 			if _, err := re.ImageID(ref); err != nil {
 				return nil, err
 			}

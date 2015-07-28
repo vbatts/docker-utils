@@ -101,8 +101,7 @@ func TestRegistryFetchLayers(t *testing.T) {
 	}
 }
 func TestRegistryImageRepositoriesFile(t *testing.T) {
-	r := NewRegistry(DefaultRegistryHost)
-	buf, err := r.FormatRepositories(NewImageRef("tianon/true"))
+	buf, err := FormatRepositories(NewImageRef("tianon/true"))
 	if err != nil {
 		t.Fatal(err)
 	}
