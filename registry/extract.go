@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/docker/docker/graph"
 	"github.com/vbatts/docker-utils/sum"
 )
 
@@ -116,7 +115,7 @@ func extractTar(r *Registry, in io.Reader, tarsums bool) error {
 			}
 			fmt.Printf("Extracted Layer: %s [%s]\n", hashid, str)
 		} else if basename == "repositories" {
-			repoMap := map[string]graph.Repository{}
+			repoMap := map[string]map[string]string{}
 			repositoriesJson, err := ioutil.ReadAll(t)
 			if err != nil {
 				return err
