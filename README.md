@@ -7,6 +7,25 @@ External-to-docker utilities to provide a more complete experience
 
 # Commands
 
+## docker-fetch
+
+Pull images from a Docker registry, out-of-band of the Docker daemon/engine.
+
+### Installing
+
+	go get github.com/vbatts/docker-utils/cmd/docker-fetch
+
+### Usage
+
+It presently works with the Docker Hub and V1 local registries.
+
+```bash
+$ docker-fetch busybox > busybox.tar
+$ tar xOf busybox.tar | sha256sum
+b194215790fe4bf5ca3a3f0cbc4680f0f8cefac673e0c0b75a89d563c51e4084  -
+$ sudo docker load -i ./busybox.tar
+```
+
 ## docker-save-dockerfile
 
 When you want to inspect the resemblances of a Dockerfile from a local Docker image.
