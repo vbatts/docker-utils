@@ -74,7 +74,7 @@ CMD ["/bin/sh" "-c" "bash -l"]
 ```
 
 This generated Dockerfile is not directly readied for re-use in a `docker build
-...`, but gives general feedback on the steps taken to build it. An where black
+...`, but gives general feedback on the steps taken to build it. And where black
 holes exist, like files added from local context or the initial import from
 stdin.
 
