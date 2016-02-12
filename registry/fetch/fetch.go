@@ -9,6 +9,7 @@ import (
 // Default implied values regarding docker registry interactions
 var (
 	DefaultRegistryHost = "index.docker.io"
+	DockerURIScheme     = "docker://"
 	DefaultHubNamespace = "docker.io"
 	DefaultTag          = "latest"
 )
@@ -32,6 +33,11 @@ func NewRegistry(host string) RegistryEndpoint {
 	if host == "docker.io" {
 		host = DefaultRegistryHost
 	}
+
+	// FIXME somewhere around here either we test for v2 functionality, or return
+	// something that suffices the RegistryEndpoint, but can lazily determine v1
+	// or v2 registry
+
 	return &registryV1Endpoint{
 		host:      host,
 		tokens:    map[string]Token{},
