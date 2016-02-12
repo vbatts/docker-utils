@@ -56,7 +56,7 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	refs := []*fetch.ImageRef{}
+	refs := []fetch.ImageRef{}
 	for _, arg := range flag.Args() {
 		ref := fetch.NewImageRef(arg)
 		fmt.Fprintf(os.Stderr, "Pulling %s\n", ref)
