@@ -6,12 +6,14 @@ import (
 	"strings"
 )
 
+// Default implied values regarding docker registry interactions
 var (
 	DefaultRegistryHost = "index.docker.io"
 	DefaultHubNamespace = "docker.io"
 	DefaultTag          = "latest"
 )
 
+// RegistryEndpoint are the interactions of a docker registry
 type RegistryEndpoint interface {
 	Host() string
 	Token(*ImageRef) (Token, error)
@@ -20,6 +22,7 @@ type RegistryEndpoint interface {
 	FetchLayers(*ImageRef, string) ([]string, error)
 }
 
+// NewRegistry sets up a RegistryEndpoint from a host string
 func NewRegistry(host string) RegistryEndpoint {
 	if host == "docker.io" {
 		host = DefaultRegistryHost
@@ -31,7 +34,8 @@ func NewRegistry(host string) RegistryEndpoint {
 	}
 }
 
-// Return the `repositories` file format data for the referenced image
+// FormatRepositories returns the `repositories` file format data for the
+// referenced image as it conforms to the output of `docker save ...`
 func FormatRepositories(refs ...*ImageRef) ([]byte, error) {
 	// new Registry, ref.host function
 	for _, ref := range refs {
@@ -64,14 +68,17 @@ var (
 // Token is access token from a docker registry
 type Token string
 
+// Signature value of the registry Token
 func (t Token) Signature() string {
 	return t.getFieldValue("Signature")
 }
 
+// Repository value of the registry Token
 func (t Token) Repository() string {
 	return t.getFieldValue("Repository")
 }
 
+// Access value of the registry Token
 func (t Token) Access() string {
 	return t.getFieldValue("Access")
 }
