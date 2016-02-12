@@ -13,13 +13,18 @@ var (
 	DefaultTag          = "latest"
 )
 
+// Hoster is returns a hostname for the structure
+type Hoster interface {
+	Host() string
+}
+
 // RegistryEndpoint are the interactions of a docker registry
 type RegistryEndpoint interface {
-	Host() string
-	Token(*ImageRef) (Token, error)
-	ImageID(*ImageRef) (string, error)
-	Ancestry(*ImageRef) ([]string, error)
-	FetchLayers(*ImageRef, string) ([]string, error)
+	Hoster
+	Token(ImageRef) (Token, error)
+	ImageID(ImageRef) (string, error)
+	Ancestry(ImageRef) ([]string, error)
+	FetchLayers(ImageRef, string) ([]string, error)
 }
 
 // NewRegistry sets up a RegistryEndpoint from a host string
@@ -36,7 +41,7 @@ func NewRegistry(host string) RegistryEndpoint {
 
 // FormatRepositories returns the `repositories` file format data for the
 // referenced image as it conforms to the output of `docker save ...`
-func FormatRepositories(refs ...*ImageRef) ([]byte, error) {
+func FormatRepositories(refs ...ImageRef) ([]byte, error) {
 	// new Registry, ref.host function
 	for _, ref := range refs {
 		if ref.ID() == "" {

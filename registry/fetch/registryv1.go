@@ -24,7 +24,7 @@ func (re *registryV1Endpoint) Host() string {
 }
 
 // Token fetches and returns a fresh Token from this registryV1Endpoint for the imageName provided
-func (re *registryV1Endpoint) Token(img *ImageRef) (Token, error) {
+func (re *registryV1Endpoint) Token(img ImageRef) (Token, error) {
 	url := fmt.Sprintf("https://%s/v1/repositories/%s/images", re.host, img.Name())
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -58,7 +58,7 @@ func (re *registryV1Endpoint) Token(img *ImageRef) (Token, error) {
 	return re.tokens[img.Name()], nil
 }
 
-func (re *registryV1Endpoint) ImageID(img *ImageRef) (string, error) {
+func (re *registryV1Endpoint) ImageID(img ImageRef) (string, error) {
 	if _, ok := re.tokens[img.Name()]; !ok {
 		if _, err := re.Token(img); err != nil {
 			return "", err
@@ -96,7 +96,7 @@ func (re *registryV1Endpoint) ImageID(img *ImageRef) (string, error) {
 	return img.ID(), nil
 }
 
-func (re *registryV1Endpoint) Ancestry(img *ImageRef) ([]string, error) {
+func (re *registryV1Endpoint) Ancestry(img ImageRef) ([]string, error) {
 	emptySet := []string{}
 	if _, ok := re.tokens[img.Name()]; !ok {
 		if _, err := re.Token(img); err != nil {
@@ -145,7 +145,7 @@ func (re *registryV1Endpoint) Ancestry(img *ImageRef) ([]string, error) {
 }
 
 // This is presently fetching docker-registry v1 API and returns the IDs of the layers fetched from the registry
-func (re *registryV1Endpoint) FetchLayers(img *ImageRef, dest string) ([]string, error) {
+func (re *registryV1Endpoint) FetchLayers(img ImageRef, dest string) ([]string, error) {
 	emptySet := []string{}
 	if _, ok := re.tokens[img.Name()]; !ok {
 		if _, err := re.Token(img); err != nil {
