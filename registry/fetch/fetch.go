@@ -9,10 +9,12 @@ import (
 // Default implied values regarding docker registry interactions
 var (
 	DefaultRegistryHost = "index.docker.io"
-	DockerURIScheme     = "docker://"
 	DefaultHubNamespace = "docker.io"
 	DefaultTag          = "latest"
 )
+
+// DockerURIScheme is the URI scheme to clearly delineate Docker image references
+const DockerURIScheme = "docker://"
 
 // Hoster is returns a hostname for the structure
 type Hoster interface {

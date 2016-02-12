@@ -14,16 +14,20 @@ func TestImageRefHost(t *testing.T) {
 		ExpectedName string
 		ExpectedTag  string
 	}{
+		{"docker://docker.io/tianon/true", DefaultHubNamespace, "tianon/true", DefaultTag},
 		{"docker.io/tianon/true", DefaultHubNamespace, "tianon/true", DefaultTag},
 		{"docker.io:80/tianon/true", DefaultHubNamespace + ":80", "tianon/true", DefaultTag},
 		{"docker.io/tianon/true:hurr", DefaultHubNamespace, "tianon/true", "hurr"},
+		{"docker://tianon/true", DefaultHubNamespace, "tianon/true", DefaultTag},
 		{"tianon/true", DefaultHubNamespace, "tianon/true", DefaultTag},
 		{"tianon/true:latest", DefaultHubNamespace, "tianon/true", DefaultTag},
 		{"fedora:latest", DefaultHubNamespace, "fedora", DefaultTag},
+		{"docker://localhost:5000/fedora", "localhost:5000", "fedora", DefaultTag},
 		{"localhost:5000/fedora", "localhost:5000", "fedora", DefaultTag},
 		{"localhost:5000/fedora:latest", "localhost:5000", "fedora", DefaultTag},
 		{"localhost/fedora", "localhost", "fedora", DefaultTag},
 		{"localhost/fedora:latest", "localhost", "fedora", DefaultTag},
+		{"docker://192.168.1.23:5000/tianon/true", "192.168.1.23:5000", "tianon/true", DefaultTag},
 		{"192.168.1.23:5000/tianon/true", "192.168.1.23:5000", "tianon/true", DefaultTag},
 		{"192.168.1.23:5000/fedora", "192.168.1.23:5000", "fedora", DefaultTag},
 		{"192.168.1.23/fedora", "192.168.1.23", "fedora", DefaultTag},
