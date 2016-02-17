@@ -38,7 +38,7 @@ func NewRegistry(host string) RegistryEndpoint {
 
 	// FIXME somewhere around here either we test for v2 functionality, or return
 	// something that suffices the RegistryEndpoint, but can lazily determine v1
-	// or v2 registry
+	// or v2 registry. Perhaps having it such that a v2 can fallback to a v1 transparently.
 
 	return &registryV1Endpoint{
 		host:      host,

@@ -25,9 +25,10 @@ type ImageRef interface {
 	Ancestry() []string   // List of ancestor IDs, if available
 	SetAncestry([]string) // set the ancestry for the image reference
 	Tag() string          // the tag (according to docker's formatting) of the image reference
-	Digest() string       // image's digest, if available
-	String() string       // pretty print the image's reference
-	Kind() Kind           // get the Kind of the image reference, if available
+	SetTag(string)
+	Digest() string // image's digest, if available
+	String() string // pretty print the image's reference
+	Kind() Kind     // get the Kind of the image reference, if available
 }
 
 type imageRef struct {
@@ -38,6 +39,10 @@ type imageRef struct {
 	digest   string
 	id       string
 	ancestry []string
+}
+
+func (ir *imageRef) SetTag(tag string) {
+	ir.tag = tag
 }
 
 func (ir *imageRef) Host() string {
