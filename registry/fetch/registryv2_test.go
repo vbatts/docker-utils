@@ -7,6 +7,11 @@ import (
 	"testing"
 )
 
+func TestV2Ping(t *testing.T) {
+	re := registryV2Endpoint{host: "localhost:5000"}
+	re.ping()
+}
+
 func TestUrl(t *testing.T) {
 	img := NewImageRef("localhost:5000/vbatts/slackware")
 	tl, err := getV2TagList(img)

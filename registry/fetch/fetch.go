@@ -11,6 +11,7 @@ var (
 	DefaultRegistryHost = "index.docker.io"
 	DefaultHubNamespace = "docker.io"
 	DefaultTag          = "latest"
+	imageNameRegexp     = "[a-z0-9]+(?:[._-][a-z0-9]+)*"
 )
 
 // DockerURIScheme is the URI scheme to clearly delineate Docker image references
@@ -19,6 +20,11 @@ const DockerURIScheme = "docker://"
 // Hoster is returns a hostname for the structure
 type Hoster interface {
 	Host() string
+}
+
+type Puller interface {
+	Pull(img ImageRef, dest string) error
+	ImageID(ImageRef) (string, error) // TODO this doesn't belong here
 }
 
 // RegistryEndpoint are the interactions of a docker registry
@@ -31,14 +37,19 @@ type RegistryEndpoint interface {
 }
 
 // NewRegistry sets up a RegistryEndpoint from a host string
-func NewRegistry(host string) RegistryEndpoint {
+func NewRegistry(host string) Puller {
 	if host == "docker.io" {
 		host = DefaultRegistryHost
 	}
 
-	// FIXME somewhere around here either we test for v2 functionality, or return
-	// something that suffices the RegistryEndpoint, but can lazily determine v1
-	// or v2 registry. Perhaps having it such that a v2 can fallback to a v1 transparently.
+	re := registryV2Endpoint{host: host}
+	// i hate having a network call in this initializer, but it will fail early
+	if err := re.ping(); err == nil {
+		return &re
+	}
+	// FIXME or return something that suffices the RegistryEndpoint, but can
+	// lazily determine v1 or v2 registry. Perhaps having it such that a v2 can
+	// fallback to a v1 transparently.
 
 	return &registryV1Endpoint{
 		host:      host,

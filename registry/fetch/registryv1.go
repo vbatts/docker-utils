@@ -11,12 +11,40 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 )
+
+var defaultV1Routes = mux.NewRouter()
+
+func init() {
+	defaultV1Routes.Path("/v1/_ping").Name("Base")
+	defaultV1Routes.Path("/v1/repositories/{name:.*}/images").Name("ImageList")
+	defaultV1Routes.Path("/v1/repositories/{name:.*}/tags").Name("ImageTagList")
+	defaultV1Routes.Path("/v1/repositories/{name:.*}/tags/{tag}").Name("ImageTagRef")
+	defaultV1Routes.Path("/v1/images/{name:.*}/ancestry").Name("ImageAncestryList")
+	defaultV1Routes.Path("/v1/images/{name:.*}/json").Name("ImageManifest")
+	defaultV1Routes.Path("/v1/images/{name:.*}/layer").Name("ImageBlob")
+}
+
+func NewV1Registry(host string) RegistryEndpoint {
+	if host == "docker.io" {
+		host = DefaultRegistryHost
+	}
+	return &registryV1Endpoint{
+		host:      host,
+		tokens:    map[string]Token{},
+		endpoints: []string{},
+	}
+}
 
 type registryV1Endpoint struct {
 	host      string
 	tokens    map[string]Token
 	endpoints []string
+}
+
+func (re *registryV1Endpoint) Pull(img ImageRef, dest string) error {
+	return nil
 }
 
 func (re *registryV1Endpoint) Host() string {

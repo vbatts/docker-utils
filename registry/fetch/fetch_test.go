@@ -50,7 +50,7 @@ func TestImageRefHost(t *testing.T) {
 
 func TestRegistryFetchToken(t *testing.T) {
 	ref := NewImageRef("tianon/true")
-	r := NewRegistry(ref.Host())
+	r := NewV1Registry(ref.Host())
 	tok, err := r.Token(ref)
 	if err != nil {
 		t.Fatal(err)
@@ -66,7 +66,7 @@ func TestRegistryFetchToken(t *testing.T) {
 	}
 }
 func TestRegistryFetchImageID(t *testing.T) {
-	r := NewRegistry(DefaultRegistryHost)
+	r := NewV1Registry(DefaultRegistryHost)
 	id, err := r.ImageID(NewImageRef("tianon/true"))
 	if err != nil {
 		t.Fatal(err)
@@ -76,7 +76,7 @@ func TestRegistryFetchImageID(t *testing.T) {
 	}
 }
 func TestRegistryFetchAncestry(t *testing.T) {
-	r := NewRegistry(DefaultRegistryHost)
+	r := NewV1Registry(DefaultRegistryHost)
 	ids, err := r.Ancestry(NewImageRef("tianon/true"))
 	if err != nil {
 		t.Fatal(err)
@@ -86,7 +86,7 @@ func TestRegistryFetchAncestry(t *testing.T) {
 	}
 }
 func TestRegistryFetchLayers(t *testing.T) {
-	r := NewRegistry(DefaultRegistryHost)
+	r := NewV1Registry(DefaultRegistryHost)
 	tdir, err := ioutil.TempDir("", "test.fetch.")
 	if err != nil {
 		t.Fatal(err)

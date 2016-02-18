@@ -11,10 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var (
-	defaultV2Routes = mux.NewRouter()
-	imageNameRegexp = "[a-z0-9]+(?:[._-][a-z0-9]+)*"
-)
+var defaultV2Routes = mux.NewRouter()
 
 func init() {
 	defaultV2Routes.Path("/v2/").Name("Base")
@@ -24,10 +21,64 @@ func init() {
 }
 
 type registryV2Endpoint struct {
-	scheme    string
-	host      string
-	tokens    map[string]Token
-	endpoints []string
+	scheme       string
+	schemeTested bool
+	host         string
+	tokens       map[string]Token
+	endpoints    []string
+}
+
+func (re *registryV2Endpoint) Pull(img ImageRef, dest string) error {
+	return nil
+}
+
+// stub to satisfy the interface
+func (re *registryV2Endpoint) ImageID(img ImageRef) (string, error) {
+	return img.ID(), nil
+}
+
+// two things: check whether this is a v2 registry, and determine https:// or http://
+func (re *registryV2Endpoint) ping() error {
+	url, err := defaultV2Routes.Get("Base").URL()
+	if err != nil {
+		return err
+	}
+	if re.schemeTested {
+		url.Scheme = re.scheme
+	} else {
+		url.Scheme = "https" // try first
+	}
+	url.Host = re.host
+	req, err := http.NewRequest("GET", url.String(), nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		// ugly Failback to http
+		if strings.Contains(err.Error(), "tls: oversized record received with length") {
+			url.Scheme = "http"
+			req, err = http.NewRequest("GET", url.String(), nil)
+			if err != nil {
+				return err
+			}
+			resp, err = http.DefaultClient.Do(req)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	defer resp.Body.Close()
+
+	re.schemeTested = true
+	re.scheme = url.Scheme
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Get(%q) returned %q", url, resp.Status)
+	}
+	return nil
 }
 
 // Token fetches and returns a fresh Token from this registryV1Endpoint for the imageName provided
