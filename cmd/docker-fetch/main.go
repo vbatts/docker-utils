@@ -30,7 +30,7 @@ func init() {
 	logrus.SetLevel(logrus.WarnLevel)
 
 	// XXX print a warning that this tool is not stable yet
-	logrus.Warn("This tool is not stable yet, and should only be used for testing!")
+	//logrus.Warn("This tool is not stable yet, and should only be used for testing!")
 
 	flag.BoolVar(&debug, []string{"D", "-debug"}, debug, "debugging output")
 	flag.StringVar(&outputStream, []string{"o", "-output"}, outputStream, "output to file (default stdout)")
